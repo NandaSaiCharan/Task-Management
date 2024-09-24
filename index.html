@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management App with Stopwatch</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        button.delete {
+            background: #dc3545;
+            padding: 6px 10px;
+        }
+
+        button.delete:hover {
+            background: #c82333;
+        }
+
+        .stopwatch {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .stopwatch span {
+            font-size: 1.2em;
+        }
+
+        /* Light Mode Styles */
+        body.light {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        .container.light {
+            background: #f8f9fa;
+        }
+
+        input.light {
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #ced4da;
+        }
+
+        button.light {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Dark Mode Styles */
+        body.dark {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+
+        .container.dark {
+            background: #495057;
+        }
+
+        input.dark {
+            background: #6c757d;
+            color: #ffffff;
+            border: 1px solid #ced4da;
+        }
+
+        button.dark {
+            background-color: #17a2b8;
+            color: white;
+        }
+    </style>
+</head>
+<body class="light">
+    <div class="container light">
+        <h1>Task Management App</h1>
+        <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
+        <div class="input-container">
+            <input type="text" id="taskInput" class="light" placeholder="Add a new task..." onkeypress="checkEnter(event)">
+        </div>
+        <button class="light" onclick="addTask()">Add Task</button>
+        <ul id="taskList"></ul>
+    </div>
+
+    <script>
+        // Initialize theme based on localStorage
+        const savedTheme = localStorage.getItem("theme") || "light";
+        setTheme(savedTheme);
+
+        function setTheme(theme) {
+            const body = document.body;
+            const container = document.querySelector('.container');
+            const inputs = document.querySelectorAll('input');
+            const button = document.getElementById('toggleMode');
+
+            if (theme === "dark") {
+                body.classList.add('dark');
+                container.classList.add('dark');
+                inputs.forEach(input => input.classList.add('dark'));
+                button.classList.add('dark');
+                button.textContent = 'Switch to Light Mode';
+            } else {
+                body.classList.remove('dark');
+                container.classList.remove('dark');
+                inputs.forEach(input => input.classList.remove('dark'));
+                button.classList.remove('dark');
+                button.textContent = 'Switch to Dark Mode';
+            }
+        }
+
+        function toggleMode() {
+            const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem("theme", newTheme);
+            setTheme(newTheme);
+        }
+
+        window.onload = function() {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.forEach(task => {
+                addTaskToList(task.text);
+            });
+        };
+
+        function addTask() {
+            const taskInput = document.getElementById("taskInput");
+            const taskText = taskInput.value;
+
+            if (!taskText) {
+                alert("Please enter a task!");
+                return;
+            }
+
+            const task = { text: taskText };
+            addTaskToList(taskText);
+            saveTaskToLocalStorage(task);
+            taskInput.value = "";
+        }
+
+        function addTaskToList(taskText) {
+            const taskList = document.getElementById("taskList");
+            const li = document.createElement("li");
+
+            const taskDiv = document.createElement('div');
+            taskDiv.textContent = taskText;
+
+            const stopwatchDisplay = document.createElement('span');
+            stopwatchDisplay.textContent = "00:00:00";
+
+            const startButton = document.createElement('button');
+            startButton.textContent = "Start";
+            startButton.classList.add('start');
+            let intervalId;
+
+            startButton.onclick = function() {
+                if (startButton.textContent === "Start") {
+                    startButton.textContent = "Stop";
+                    intervalId = startStopwatch(stopwatchDisplay);
+                } else {
+                    startButton.textContent = "Start";
+                    clearInterval(intervalId);
+                }
+            };
+
+            const resetButton = document.createElement('button');
+            resetButton.textContent = "Reset";
+            resetButton.classList.add('reset');
+            resetButton.onclick = function() {
+                clearInterval(intervalId);
+                stopwatchDisplay.textContent = "00:00:00";
+                startButton.textContent = "Start";
+            };
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.classList.add("delete");
+            deleteButton.onclick = function() {
+                taskList.removeChild(li);
+                removeTaskFromLocalStorage(taskText);
+            };
+
+            const stopwatchDiv = document.createElement('div');
+            stopwatchDiv.classList.add('stopwatch');
+            stopwatchDiv.appendChild(stopwatchDisplay);
+            stopwatchDiv.appendChild(startButton);
+            stopwatchDiv.appendChild(resetButton);
+
+            // Arrange elements
+            li.appendChild(taskDiv);
+            li.appendChild(stopwatchDiv);
+            li.appendChild(deleteButton);
+
+            taskList.appendChild(li);
+        }
+
+        function startStopwatch(display) {
+            let startTime = Date.now();
+            return setInterval(function() {
+                const elapsedTime = Date.now() - startTime;
+                display.textContent = formatTime(elapsedTime);
+            }, 1000);
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function saveTaskToLocalStorage(task) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.push(task);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function removeTaskFromLocalStorage(taskText) {
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks = tasks.filter(task => task.text !== taskText);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                addTask();
+            }
+        }
+    </script>
+</body>
+</html>
