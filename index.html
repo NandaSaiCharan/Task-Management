@@ -129,7 +129,7 @@
 </head>
 <body class="light">
     <div class="container light">
-        <h1>Task Management App</h1>
+        <h1>Task Management web</h1>
         <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
         <div class="input-container">
             <input type="text" id="taskInput" class="light" placeholder="Add a new task..." onkeypress="checkEnter(event)">
@@ -139,7 +139,6 @@
     </div>
 
     <script>
-        // Initialize theme based on localStorage
         const savedTheme = localStorage.getItem("theme") || "light";
         setTheme(savedTheme);
 
@@ -164,17 +163,10 @@
             }
         }
 
-        function toggleMode() {
-            const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            localStorage.setItem("theme", newTheme);
-            setTheme(newTheme);
-        }
-
         window.onload = function() {
             const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
             tasks.forEach(task => {
-                addTaskToList(task.text);
+                addTaskToList(task.text, task.startTime);
             });
         };
 
@@ -187,13 +179,13 @@
                 return;
             }
 
-            const task = { text: taskText };
-            addTaskToList(taskText);
+            const task = { text: taskText, startTime: null };
+            addTaskToList(taskText, task.startTime);
             saveTaskToLocalStorage(task);
             taskInput.value = "";
         }
 
-        function addTaskToList(taskText) {
+        function addTaskToList(taskText, savedStartTime) {
             const taskList = document.getElementById("taskList");
             const li = document.createElement("li");
 
@@ -208,13 +200,24 @@
             startButton.classList.add('start');
             let intervalId;
 
+            let elapsedTime = 0;
+
+            if (savedStartTime) {
+                // Calculate elapsed time if a start time exists
+                elapsedTime = Date.now() - savedStartTime;
+                stopwatchDisplay.textContent = formatTime(elapsedTime);
+            }
+
             startButton.onclick = function() {
                 if (startButton.textContent === "Start") {
                     startButton.textContent = "Stop";
-                    intervalId = startStopwatch(stopwatchDisplay);
+                    const currentStartTime = Date.now() - elapsedTime; // Adjust the start time
+                    saveStartTimeToLocalStorage(taskText, currentStartTime);
+                    intervalId = startStopwatch(stopwatchDisplay, currentStartTime);
                 } else {
                     startButton.textContent = "Start";
                     clearInterval(intervalId);
+                    removeStartTimeFromLocalStorage(taskText);
                 }
             };
 
@@ -223,8 +226,10 @@
             resetButton.classList.add('reset');
             resetButton.onclick = function() {
                 clearInterval(intervalId);
+                elapsedTime = 0; // Reset elapsed time
                 stopwatchDisplay.textContent = "00:00:00";
                 startButton.textContent = "Start";
+                removeStartTimeFromLocalStorage(taskText);
             };
 
             const deleteButton = document.createElement("button");
@@ -233,6 +238,7 @@
             deleteButton.onclick = function() {
                 taskList.removeChild(li);
                 removeTaskFromLocalStorage(taskText);
+                removeStartTimeFromLocalStorage(taskText);
             };
 
             const stopwatchDiv = document.createElement('div');
@@ -241,7 +247,6 @@
             stopwatchDiv.appendChild(startButton);
             stopwatchDiv.appendChild(resetButton);
 
-            // Arrange elements
             li.appendChild(taskDiv);
             li.appendChild(stopwatchDiv);
             li.appendChild(deleteButton);
@@ -249,11 +254,17 @@
             taskList.appendChild(li);
         }
 
-        function startStopwatch(display) {
-            let startTime = Date.now();
+        function startStopwatch(display, startTime) {
+            let alertTriggered = false; // Flag to track if alert has been triggered
             return setInterval(function() {
-                const elapsedTime = Date.now() - startTime;
-                display.textContent = formatTime(elapsedTime);
+                const currentElapsedTime = Date.now() - startTime;
+                display.textContent = formatTime(currentElapsedTime);
+                
+                // Check if the elapsed time is 30 minutes (1800000 milliseconds)
+                if (currentElapsedTime >= 1800000 && !alertTriggered) {
+                    alert("Someone is waiting!");
+                    alertTriggered = true; // Ensure alert is only triggered once
+                }
             }, 1000);
         }
 
@@ -271,16 +282,45 @@
             localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
+        function saveStartTimeToLocalStorage(taskText, startTime) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const taskIndex = tasks.findIndex(task => task.text === taskText);
+            
+            if (taskIndex !== -1) {
+                tasks[taskIndex].startTime = startTime;
+            }
+            
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
         function removeTaskFromLocalStorage(taskText) {
-            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            tasks = tasks.filter(task => task.text !== taskText);
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const updatedTasks = tasks.filter(task => task.text !== taskText);
+            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        }
+
+        function removeStartTimeFromLocalStorage(taskText) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const taskIndex = tasks.findIndex(task => task.text === taskText);
+            
+            if (taskIndex !== -1) {
+                tasks[taskIndex].startTime = null; // Reset start time
+            }
+            
             localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
         function checkEnter(event) {
-            if (event.key === 'Enter') {
+            if (event.key === "Enter") {
                 addTask();
             }
+        }
+
+        function toggleMode() {
+            const currentTheme = localStorage.getItem("theme") || "light";
+            const newTheme = currentTheme === "light" ? "dark" : "light";
+            localStorage.setItem("theme", newTheme);
+            setTheme(newTheme);
         }
     </script>
 </body>
