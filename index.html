@@ -63,6 +63,18 @@
             padding: 15px;
             margin: 5px 0;
             border-radius: 4px;
+            background-color: #e9ecef;
+            word-wrap: break-word; /* Ensures long words wrap */
+            overflow: hidden; /* Hides any overflow content */
+            max-height: 100px; /* Sets a reasonable max height for the task */
+        }
+
+        li div {
+            flex: 1; /* Ensures the task text takes up available space */
+            margin-right: 20px; /* Creates space between task text and the stopwatch */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Adds '...' if the text overflows */
+            white-space: nowrap; /* Ensures the text stays on one line */
         }
 
         button.delete {
@@ -129,7 +141,7 @@
 </head>
 <body class="light">
     <div class="container light">
-        <h1>Task Management web</h1>
+        <h1>Task Management Web</h1>
         <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
         <div class="input-container">
             <input type="text" id="taskInput" class="light" placeholder="Add a new task..." onkeypress="checkEnter(event)">
@@ -282,32 +294,28 @@
             localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
-        function saveStartTimeToLocalStorage(taskText, startTime) {
-            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            const taskIndex = tasks.findIndex(task => task.text === taskText);
-            
-            if (taskIndex !== -1) {
-                tasks[taskIndex].startTime = startTime;
-            }
-            
+        function removeTaskFromLocalStorage(taskText) {
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks = tasks.filter(task => task.text !== taskText);
             localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
-        function removeTaskFromLocalStorage(taskText) {
+        function saveStartTimeToLocalStorage(taskText, startTime) {
             const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            const updatedTasks = tasks.filter(task => task.text !== taskText);
-            localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+            const taskIndex = tasks.findIndex(task => task.text === taskText);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].startTime = startTime;
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+            }
         }
 
         function removeStartTimeFromLocalStorage(taskText) {
             const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
             const taskIndex = tasks.findIndex(task => task.text === taskText);
-            
             if (taskIndex !== -1) {
-                tasks[taskIndex].startTime = null; // Reset start time
+                tasks[taskIndex].startTime = null;
+                localStorage.setItem("tasks", JSON.stringify(tasks));
             }
-            
-            localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
         function checkEnter(event) {
@@ -317,10 +325,9 @@
         }
 
         function toggleMode() {
-            const currentTheme = localStorage.getItem("theme") || "light";
-            const newTheme = currentTheme === "light" ? "dark" : "light";
-            localStorage.setItem("theme", newTheme);
-            setTheme(newTheme);
+            const currentTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
+            setTheme(currentTheme);
+            localStorage.setItem("theme", currentTheme);
         }
     </script>
 </body>
