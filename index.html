@@ -64,17 +64,17 @@
             margin: 5px 0;
             border-radius: 4px;
             background-color: #e9ecef;
-            word-wrap: break-word; /* Ensures long words wrap */
-            overflow: hidden; /* Hides any overflow content */
-            max-height: 100px; /* Sets a reasonable max height for the task */
+            word-wrap: break-word;
+            overflow: hidden;
+            max-height: 100px;
         }
 
         li div {
-            flex: 1; /* Ensures the task text takes up available space */
-            margin-right: 20px; /* Creates space between task text and the stopwatch */
+            flex: 1;
+            margin-right: 20px;
             overflow: hidden;
-            text-overflow: ellipsis; /* Adds '...' if the text overflows */
-            white-space: nowrap; /* Ensures the text stays on one line */
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         button.delete {
@@ -137,6 +137,54 @@
             background-color: #17a2b8;
             color: white;
         }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            input {
+                padding: 10px;
+                font-size: 14px;
+                margin-right: 5px;
+            }
+
+            button {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            li {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px;
+            }
+
+            li div {
+                margin-right: 0;
+                margin-bottom: 10px;
+                white-space: normal;
+            }
+
+            .stopwatch {
+                width: 100%;
+                gap: 5px;
+                justify-content: space-between;
+            }
+
+            .stopwatch span {
+                font-size: 1em;
+            }
+
+            button.delete {
+                padding: 5px 8px;
+            }
+        }
     </style>
 </head>
 <body class="light">
@@ -179,6 +227,10 @@
             const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
             tasks.forEach(task => {
                 addTaskToList(task.text, task.startTime);
+                if (task.startTime) {
+                    const elapsedTime = Date.now() - task.startTime;
+                    startStopwatchForLoadedTask(task.text, elapsedTime);
+                }
             });
         };
 
@@ -211,11 +263,9 @@
             startButton.textContent = "Start";
             startButton.classList.add('start');
             let intervalId;
-
             let elapsedTime = 0;
 
             if (savedStartTime) {
-                // Calculate elapsed time if a start time exists
                 elapsedTime = Date.now() - savedStartTime;
                 stopwatchDisplay.textContent = formatTime(elapsedTime);
             }
@@ -223,7 +273,7 @@
             startButton.onclick = function() {
                 if (startButton.textContent === "Start") {
                     startButton.textContent = "Stop";
-                    const currentStartTime = Date.now() - elapsedTime; // Adjust the start time
+                    const currentStartTime = Date.now() - elapsedTime;
                     saveStartTimeToLocalStorage(taskText, currentStartTime);
                     intervalId = startStopwatch(stopwatchDisplay, currentStartTime);
                 } else {
@@ -238,7 +288,7 @@
             resetButton.classList.add('reset');
             resetButton.onclick = function() {
                 clearInterval(intervalId);
-                elapsedTime = 0; // Reset elapsed time
+                elapsedTime = 0;
                 stopwatchDisplay.textContent = "00:00:00";
                 startButton.textContent = "Start";
                 removeStartTimeFromLocalStorage(taskText);
@@ -266,26 +316,19 @@
             taskList.appendChild(li);
         }
 
-        function startStopwatch(display, startTime) {
-            let alertTriggered = false; // Flag to track if alert has been triggered
+        function startStopwatch(displayElement, startTime) {
             return setInterval(function() {
-                const currentElapsedTime = Date.now() - startTime;
-                display.textContent = formatTime(currentElapsedTime);
-                
-                // Check if the elapsed time is 30 minutes (1800000 milliseconds)
-                if (currentElapsedTime >= 1800000 && !alertTriggered) {
-                    alert("Someone is waiting!");
-                    alertTriggered = true; // Ensure alert is only triggered once
-                }
+                const elapsedTime = Date.now() - startTime;
+                displayElement.textContent = formatTime(elapsedTime);
             }, 1000);
         }
 
-        function formatTime(ms) {
-            const totalSeconds = Math.floor(ms / 1000);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
         }
 
         function saveTaskToLocalStorage(task) {
@@ -301,33 +344,42 @@
         }
 
         function saveStartTimeToLocalStorage(taskText, startTime) {
-            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            const taskIndex = tasks.findIndex(task => task.text === taskText);
-            if (taskIndex !== -1) {
-                tasks[taskIndex].startTime = startTime;
-                localStorage.setItem("tasks", JSON.stringify(tasks));
-            }
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const task = tasks.find(task => task.text === taskText);
+            task.startTime = startTime;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
         function removeStartTimeFromLocalStorage(taskText) {
-            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            const taskIndex = tasks.findIndex(task => task.text === taskText);
-            if (taskIndex !== -1) {
-                tasks[taskIndex].startTime = null;
-                localStorage.setItem("tasks", JSON.stringify(tasks));
-            }
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            const task = tasks.find(task => task.text === taskText);
+            task.startTime = null;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
         }
 
-        function checkEnter(event) {
-            if (event.key === "Enter") {
-                addTask();
-            }
+        function startStopwatchForLoadedTask(taskText, elapsedTime) {
+            const taskItems = document.querySelectorAll('li');
+            taskItems.forEach(item => {
+                if (item.querySelector('div').textContent === taskText) {
+                    const startButton = item.querySelector('.start');
+                    const stopwatchDisplay = item.querySelector('span');
+                    startButton.textContent = "Stop";
+                    const intervalId = startStopwatch(stopwatchDisplay, Date.now() - elapsedTime);
+                }
+            });
         }
 
         function toggleMode() {
-            const currentTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
-            setTheme(currentTheme);
-            localStorage.setItem("theme", currentTheme);
+            const currentTheme = document.body.classList.contains("dark") ? "dark" : "light";
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            localStorage.setItem("theme", newTheme);
+            setTheme(newTheme);
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                addTask();
+            }
         }
     </script>
 </body>
